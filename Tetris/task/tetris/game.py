@@ -4,19 +4,13 @@ class Shape:
         self.name = name
         self.current_coordinates = coordinates[0]
         self.rotated = 0
-
-    def getCoordinates(self):
-        return self.coordinates
-
-    def getName(self):
-        return self.name
+        self.floor = False
 
     def rotateCurrentCoordinates(self):
         self.rotated += 1
         self.current_coordinates = self.coordinates[self.rotated % len(self.coordinates)]
 
 
-# in the next phase, when things land then the proper self.board will be updated
 class TetrisGame:
     def __init__(self):
         self.board = None
@@ -42,38 +36,61 @@ class TetrisGame:
         self.board = "-" + formatted * (self.M * self.N)
         self.board = self.board.split(" ")
 
-
     def print_board(self, board_copy):
         for i in range(0, (self.M * self.N), self.M):
             print(" ".join(board_copy[i:i + self.M]))
 
+    # in the next phase, when things land then the proper self.board will be updated
+    # for left, check the modulo value is >0
+    # for right check the modulo value is <M
+    # for rotate, check that every rotated value is within bounds
+
+    # for floor, if any of the coordinates = N
+
     def update_current_coordinates(self, shape, value):
         temp_coordinates = []
         for coordinate in shape.current_coordinates:
-            temp_coordinates.append((coordinate + value))
+            if value == -1:
+                if (coordinate + value) % self.N == self.N - 1:
+                    if coordinate + value >= self.M * self.N:
+                        shape.floor = True
+                    return
+            elif value == 1:
+                if (coordinate) % self.N+1 == self.N:
+                    if coordinate + value >= self.M * self.N:
+                        shape.floor = True
+                    return
+
+            if coordinate + value >= self.M * (self.N-1):
+                shape.floor = True
+            coordinate += value
+            temp_coordinates.append(coordinate)
         shape.current_coordinates = temp_coordinates
 
     def update_all_coordinates(self, shape, value):
         temp_coordinates = []
 
-        for i in range(len(shape.coordinates)):
-            temp_coordinates.append([])
-            for coordinate in shape.coordinates[i]:
-                temp_coordinates[i].append((coordinate + value))
-        shape.coordinates = temp_coordinates
+        if shape.floor is False:
+            for i in range(len(shape.coordinates)):
+                temp_coordinates.append([])
+                for coordinate in shape.coordinates[i]:
+                    temp_coordinates[i].append((coordinate + value))
+            shape.coordinates = temp_coordinates
 
     def shift_shape(self, shape, direction):
-        if direction == "down":
-            self.update_all_coordinates(shape, self.M)
+        if direction == "down" and shape.floor is False:
             self.update_current_coordinates(shape, self.M)
+            self.update_all_coordinates(shape, self.M)
 
-        elif direction == "right":
-            self.update_all_coordinates(shape, 1)
+
+        elif direction == "right" and shape.floor is False:
             self.update_current_coordinates(shape, 1)
+            self.update_all_coordinates(shape, 1)
 
-        elif direction == "left":
-            self.update_all_coordinates(shape, -1)
+
+        elif direction == "left" and shape.floor is False:
             self.update_current_coordinates(shape, -1)
+            self.update_all_coordinates(shape, -1)
 
     def rotate_shape(self, shape):
         shape.rotateCurrentCoordinates()
@@ -99,19 +116,22 @@ class TetrisGame:
         movement = input()
 
         while movement != "exit":
-            if movement == "rotate":
-                self.rotate_shape(shape)
-                self.shift_shape(shape, "down")
-            elif movement == "left":
-                self.shift_shape(shape, "left")
-                self.shift_shape(shape, "down")
-            elif movement == "right":
-                self.shift_shape(shape, "right")
-                self.shift_shape(shape, "down")
-            elif movement == "down":
-                self.shift_shape(shape, "down")
+            if shape.floor == True:
+                pass
             else:
-                print("Unrecognised")
+                if movement == "rotate":
+                    self.rotate_shape(shape)
+                    self.shift_shape(shape, "down")
+                elif movement == "left":
+                    self.shift_shape(shape, "left")
+                    self.shift_shape(shape, "down")
+                elif movement == "right":
+                    self.shift_shape(shape, "right")
+                    self.shift_shape(shape, "down")
+                elif movement == "down":
+                    self.shift_shape(shape, "down")
+                else:
+                    print("Unrecognised")
 
             print()
             self.print_board(self.map_coordinates_board(shape.current_coordinates))
